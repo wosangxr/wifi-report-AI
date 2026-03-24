@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fullname,
             location: document.getElementById('location').value,
             room: document.getElementById('room').value,
-            problem: document.querySelector('input[name="problem"]:checked').value,
+            problem: "พบปัญหาจากภาพถ่าย",
             signal: parseInt(signalInput.value),
             details: document.getElementById('details').value || "-"
         };
