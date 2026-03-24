@@ -315,6 +315,7 @@
                                     <span style="font-size: 0.9rem; font-weight: 600; color: var(--dark);">รายละเอียด:</span>
                                     <p style="font-size: 0.95rem; color: var(--text-main); margin-top: 0.2rem;">${issue.details}</p>
                                 </div>
+                                ${issue.image_url ? `<div style="margin-bottom: 1rem;"><span style="font-size: 0.9rem; font-weight: 600; color: var(--dark); display:block; margin-bottom: 0.5rem;">ภาพถ่ายสัญญาณ:</span><a href="${issue.image_url}" target="_blank"><img src="${issue.image_url}" alt="Signal Image" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); object-fit: contain;" /></a></div>` : ''}
                                 <p style="font-size: 0.8rem; color: var(--text-muted);"><i class='bx bx-time'></i> ${new Date(issue.created_at).toLocaleString('th-TH')}</p>
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 0.8rem; min-width: 160px;">

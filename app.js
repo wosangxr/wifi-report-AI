@@ -265,6 +265,29 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
+            let uploadedImageUrl = null;
+            if (signalImage.files && signalImage.files[0]) {
+                const file = signalImage.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `uploads/${fileName}`;
+
+                btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> อัปโหลดรูปภาพ...`;
+
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('wifi_images')
+                    .upload(filePath, file);
+
+                if (uploadError) {
+                    console.error('Upload Error:', uploadError);
+                } else {
+                    const { data } = supabaseClient.storage.from('wifi_images').getPublicUrl(filePath);
+                    uploadedImageUrl = data.publicUrl;
+                }
+            }
+
+            btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> กำลังส่งข้อมูล...`;
+
             const { data: result, error } = await supabaseClient
                 .from('wifi_reports')
                 .insert([
@@ -274,7 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         room: payload.room,
                         problem: payload.problem,
                         signal_level: payload.signal,
-                        details: payload.details
+                        details: payload.details,
+                        image_url: uploadedImageUrl
                     }
                 ]);
 
