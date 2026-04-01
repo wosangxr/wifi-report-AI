@@ -1,204 +1,346 @@
+const path = require('path');
 require('dotenv').config();
 const express = require('express');
-const sql = require('mssql');
 const cors = require('cors');
-const axios = require('axios');
+const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
+const vision = require('@google-cloud/vision');
 
-// ==========================================
-// 1. App Configuration & Initialization
-// ==========================================
 const app = express();
-const PORT = process.env.PORT || 3001;
 
-// Middlewares
+// File upload handler - keep image in memory
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 } // 15MB limit
+});
+
+// ── Initialize Clients ──
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+);
+
+let visionClient;
+try {
+    visionClient = new vision.ImageAnnotatorClient();
+    console.log('✅ Cloud Vision AI client initialized');
+} catch (err) {
+    console.warn('⚠️  Cloud Vision AI not available:', err.message);
+    console.warn('   Image analysis will use fallback mode');
+}
+
+// ── Middlewares ──
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname)); // Serve frontend files
 
-// ==========================================
-// 2. Database Configuration
-// ==========================================
-const dbConfig = {
-    user: process.env.DB_USER || "sa",
-    password: process.env.DB_PASSWORD || "123456789",
-    server: process.env.DB_SERVER || "localhost",
-    database: process.env.DB_DATABASE || "wifi_issues",
-    options: {
-        encrypt: false, // Set to true if using Azure
-        trustServerCertificate: true // Trust local certificates
-    }
-};
+// Serve frontend files from the same folder
+app.use(express.static(__dirname)); 
 
-// Initial Database Connection Check
-console.log('--- Database Configuration ---');
-console.log('Server:', dbConfig.server);
-console.log('User:', dbConfig.user);
-console.log('Database:', dbConfig.database);
-console.log('------------------------------');
+// Explicit fallback routes for main pages
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
-sql.connect(dbConfig).then(pool => {
-    if (pool.connected) {
-        console.log('✅ Connected to SQL Server successfully!');
-    }
-}).catch(err => {
-    console.error('❌ SQL Connection Error:', err.message);
-    console.log('TIP: Check if TCP/IP is enabled and SQL Server is running.');
-});
+// ============================================================
+// API Routes
+// ============================================================
 
-// ==========================================
-// 3. API Routes
-// ==========================================
-
-// --- Health Check ---
+// Health Check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', msg: 'API is running' });
+    res.json({
+        status: 'ok',
+        message: 'WiFi Report AI Backend — Supabase + Cloud Vision',
+        supabase: process.env.SUPABASE_URL,
+        vision_ai: visionClient ? 'ready' : 'fallback'
+    });
 });
 
-// --- Setup Database Table (Optional Utility) ---
-app.get('/api/setup-db', async (req, res) => {
+// ── POST /api/analyze-signal ──
+// Receives image → runs Cloud Vision AI → returns signal level (no storage)
+app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
     try {
-        const pool = await sql.connect(dbConfig);
-        await pool.query(`
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='wifi_reports' AND xtype='U')
-            BEGIN
-                CREATE TABLE wifi_reports (
-                    id INT IDENTITY(1,1) PRIMARY KEY,
-                    username NVARCHAR(100),
-                    location NVARCHAR(100),
-                    room NVARCHAR(50),
-                    problem NVARCHAR(100),
-                    signal_level INT,
-                    details NVARCHAR(MAX),
-                    status NVARCHAR(20) DEFAULT 'pending',
-                    created_at DATETIME DEFAULT GETDATE()
-                );
-            END
-        `);
-        res.send(`✅ Table [wifi_reports] checked/created successfully!<br><br>Go back to <a href="http://localhost:${PORT}">http://localhost:${PORT}</a> to use the app.`);
-    } catch (err) {
-        console.error('Database Setup Error:', err);
-        res.status(500).send(`❌ Error connecting to Database: ${err.message}<br><br>Make sure DB_USER, DB_PASSWORD, and DB_DATABASE exist in your SQL Server.`);
-    }
-});
-
-// --- Get All Issues ---
-app.get('/api/issues', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.query('SELECT * FROM wifi_reports ORDER BY id DESC');
-        
-        // Map records for frontend consumption
-        const mappedRecords = result.recordset.map(record => {
-            let student_id = "ไม่ระบุ";
-            let fullname = record.username || "ไม่ระบุ";
-            
-            // Extract student_id and fullname if stored as "ID - Name"
-            if (record.username && record.username.includes(" - ")) {
-                const parts = record.username.split(" - ");
-                student_id = parts[0];
-                fullname = parts[1];
-            }
-            
-            return {
-                id: record.id,
-                student_id: student_id,
-                fullname: fullname,
-                location: record.location,
-                room: record.room,
-                problem: record.problem,
-                signal: record.signal_level,
-                details: record.details,
-                status: record.status,
-                created_at: record.created_at
-            };
-        });
-        
-        res.json(mappedRecords);
-    } catch (err) {
-        console.error('Fetch issues error:', err);
-        res.status(500).json({ error: 'Database fetch error' });
-    }
-});
-
-// --- Create New Issue ---
-app.post('/api/issues', async (req, res) => {
-    try {
-        const { student_id, fullname, location, room, problem, signal, details } = req.body;
-        const pool = await sql.connect(dbConfig);
-        
-        const username = `${student_id || 'ไม่ระบุ'} - ${fullname || 'ไม่ระบุ'}`;
-
-        await pool.request()
-            .input('username', sql.NVarChar, username)
-            .input('location', sql.NVarChar, location || '-')
-            .input('room', sql.NVarChar, room || '-')
-            .input('problem', sql.NVarChar, problem || '-')
-            .input('signal_level', sql.Int, signal || 0)
-            .input('details', sql.NVarChar, details || '-')
-            .query(`
-                INSERT INTO wifi_reports (username, location, room, problem, signal_level, details) 
-                VALUES (@username, @location, @room, @problem, @signal_level, @details)
-            `);
-
-        // Trigger Line Notify asynchronously (non-blocking)
-        if (process.env.LINE_NOTIFY_TOKEN && process.env.LINE_NOTIFY_TOKEN !== 'YOUR_LINE_NOTIFY_TOKEN_HERE') {
-            const message = `\n🚨 แจ้งปัญหา WiFi 🚨\n📍 สถานที่: ${location}\nห้อง: ${room}\nผู้แจ้ง: ${fullname} (${student_id})\nปัญหา: ${problem}\nสัญญาณ: ${signal} ขีด\nรายละเอียด: ${details || '-'}`;
-            
-            axios.post('https://notify-api.line.me/api/notify', new URLSearchParams({ message }), {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': `Bearer ${process.env.LINE_NOTIFY_TOKEN}`
-                }
-            }).catch(e => console.error("Line Notify Error:", e.response?.data || e.message));
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'No image provided' });
         }
 
-        res.status(201).json({ success: true, message: 'Issue reported successfully' });
+        let signalLevel = 0;
+        let aiMethod = 'none';
+
+        if (visionClient) {
+            // ── Run Cloud Vision AI ──
+            const [visionResult] = await visionClient.annotateImage({
+                image: { content: req.file.buffer.toString('base64') },
+                features: [
+                    { type: 'TEXT_DETECTION' },
+                    { type: 'LABEL_DETECTION', maxResults: 20 },
+                    { type: 'OBJECT_LOCALIZATION', maxResults: 20 }
+                ]
+            });
+
+            // Method 1: Parse signal from OCR text
+            const textAnnotations = visionResult.textAnnotations || [];
+            if (textAnnotations.length > 0) {
+                const fullText = textAnnotations[0].description || '';
+                console.log(`📝 OCR: "${fullText.substring(0, 150).replace(/\n/g, ' ')}"`);
+                const parsed = parseSignalFromText(fullText);
+                if (parsed > 0) { signalLevel = parsed; aiMethod = 'OCR'; }
+            }
+
+            // Method 2: Parse from Vision labels
+            if (signalLevel === 0) {
+                const labels = visionResult.labelAnnotations || [];
+                console.log(`🏷️  Labels: ${labels.slice(0, 5).map(l => l.description).join(', ')}`);
+                const parsed = parseSignalFromLabels(labels);
+                if (parsed > 0) { signalLevel = parsed; aiMethod = 'Label'; }
+            }
+
+            // Method 3: Count bar-like detected objects
+            if (signalLevel === 0) {
+                const objects = visionResult.localizedObjectAnnotations || [];
+                const parsed = parseSignalFromObjects(objects);
+                if (parsed > 0) { signalLevel = parsed; aiMethod = 'Object'; }
+            }
+        }
+
+        // Fallback: default to 2 bars
+        if (signalLevel === 0) {
+            signalLevel = 2;
+            aiMethod = visionClient ? 'default' : 'fallback';
+        }
+
+        console.log(`📶 Signal: ${signalLevel} bar(s) — detected by: ${aiMethod}`);
+
+        res.json({
+            success: true,
+            signal_level: signalLevel,
+            ai_method: aiMethod
+        });
+
     } catch (err) {
-        console.error('Create issue error:', err);
-        res.status(500).json({ error: 'Database insert error' });
+        console.error('❌ /api/analyze-signal error:', err.message);
+        // Return fallback instead of error so frontend still works
+        res.json({
+            success: true,
+            signal_level: 2,
+            ai_method: 'error-fallback'
+        });
     }
 });
 
-// --- Update Issue Status ---
+// ── POST /api/submit ──
+// Receives FormData (image + fields) → uploads image to Supabase Storage → saves record to DB
+app.post('/api/submit', upload.single('image'), async (req, res) => {
+    try {
+        const { student_id, fullname, location, room, problem, signal, details } = req.body;
+        let imageUrl = null;
+
+        // ── Upload image to Supabase Storage ──
+        if (req.file) {
+            const ext = (req.file.originalname.split('.').pop() || 'jpg').toLowerCase();
+            const fileName = `uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('wifi_images')
+                .upload(fileName, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                    cacheControl: '31536000'
+                });
+
+            if (uploadError) {
+                console.error('⚠️ Image upload error:', uploadError.message);
+            } else {
+                const { data } = supabase.storage.from('wifi_images').getPublicUrl(fileName);
+                imageUrl = data.publicUrl;
+                console.log(`✅ Image uploaded: ${imageUrl}`);
+            }
+        }
+
+        // ── Save to Supabase DB ──
+        const username = `${student_id || 'ไม่ระบุ'} - ${fullname || 'ไม่ระบุ'}`;
+        const { error: dbError } = await supabase.from('wifi_reports').insert([{
+            username,
+            location: location || '-',
+            room: room || '-',
+            problem: problem || 'พบปัญหาจากภาพถ่าย',
+            signal_level: parseInt(signal) || 0,
+            details: details || '-',
+            image_url: imageUrl
+        }]);
+
+        if (dbError) throw dbError;
+
+        res.json({
+            success: true,
+            image_url: imageUrl,
+            message: 'บันทึกข้อมูลสำเร็จ'
+        });
+
+    } catch (err) {
+        console.error('❌ /api/submit error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ── GET /api/issues ──
+app.get('/api/issues', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('wifi_reports')
+            .select('*')
+            .neq('status', 'deleted')
+            .order('id', { ascending: false });
+
+        if (error) throw error;
+
+        const mapped = (data || []).map(r => {
+            let student_id = 'ไม่ระบุ';
+            let fullname = r.username || 'ไม่ระบุ';
+            if (r.username && r.username.includes(' - ')) {
+                [student_id, fullname] = r.username.split(' - ');
+            }
+            return {
+                id: r.id, student_id, fullname,
+                location: r.location, room: r.room,
+                problem: r.problem, signal: r.signal_level,
+                details: r.details, status: r.status,
+                image_url: r.image_url, created_at: r.created_at
+            };
+        });
+
+        res.json(mapped);
+    } catch (err) {
+        console.error('❌ /api/issues GET error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── GET /api/issues/all (for dashboard — includes all non-deleted for ranking) ──
+app.get('/api/issues/all', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('wifi_reports')
+            .select('*')
+            .order('id', { ascending: false });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) {
+        console.error('❌ /api/issues/all error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── PUT /api/issues/:id/status ──
 app.put('/api/issues/:id/status', async (req, res) => {
     try {
-        const { id } = req.params;
         const { status } = req.body;
-        
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('id', sql.Int, id)
-            .input('status', sql.NVarChar, status)
-            .query('UPDATE wifi_reports SET status = @status WHERE id = @id');
-            
-        res.json({ success: true, message: `Status updated to ${status}` });
+        const { error } = await supabase.from('wifi_reports')
+            .update({ status })
+            .eq('id', req.params.id);
+        if (error) throw error;
+        res.json({ success: true });
     } catch (err) {
-        console.error('Update status error:', err);
-        res.status(500).json({ error: 'Database update error' });
+        res.status(500).json({ error: err.message });
     }
 });
 
-// --- Delete Issue ---
+// ── DELETE /api/issues/:id (soft delete — mark as 'deleted') ──
 app.delete('/api/issues/:id', async (req, res) => {
     try {
-        const { id } = req.params;
-        
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('id', sql.Int, id)
-            .query('DELETE FROM wifi_reports WHERE id = @id');
-            
-        res.json({ success: true, message: 'Issue deleted successfully' });
+        const { error } = await supabase.from('wifi_reports')
+            .update({ status: 'deleted' })
+            .eq('id', req.params.id);
+        if (error) throw error;
+        res.json({ success: true });
     } catch (err) {
-        console.error('Delete issue error:', err);
-        res.status(500).json({ error: 'Database delete error' });
+        res.status(500).json({ error: err.message });
     }
 });
 
-// ==========================================
-// 4. Server Listener
-// ==========================================
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+// ── POST /api/reset (insert SYSTEM_RESET marker) ──
+app.post('/api/reset', async (req, res) => {
+    try {
+        const { error } = await supabase.from('wifi_reports').insert([{
+            username: 'SYSTEM',
+            location: 'SYSTEM_RESET',
+            room: '-',
+            problem: 'RESET',
+            signal_level: 0,
+            details: new Date().toISOString()
+        }]);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── POST /api/clear-all (mark all as deleted for admin view) ──
+app.post('/api/clear-all', async (req, res) => {
+    try {
+        const { error } = await supabase.from('wifi_reports')
+            .update({ status: 'deleted' })
+            .neq('status', 'deleted');
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================================
+// Vision AI Helper Functions
+// ============================================================
+
+function parseSignalFromText(text) {
+    if (!text) return 0;
+
+    // Pattern: "2/4", "3/4", "1/4", "4/4"
+    const fractionMatch = text.match(/\b([1-4])\/[4-5]\b/);
+    if (fractionMatch) return parseInt(fractionMatch[1]);
+
+    // Pattern: "2 bars", "3 ขีด", "Signal 1"
+    const barMatch = text.match(/\b([1-4])\s*(bar|bars|ขีด|สัญญาณ|signal)/i);
+    if (barMatch) return parseInt(barMatch[1]);
+
+    // Pattern: dBm signal strength → convert to bars
+    const dbmMatch = text.match(/-(\d{2,3})\s*d[Bb][Mm]/);
+    if (dbmMatch) {
+        const dbm = parseInt(dbmMatch[1]);
+        if (dbm <= 50) return 4;
+        if (dbm <= 60) return 3;
+        if (dbm <= 70) return 2;
+        return 1;
+    }
+
+    return 0;
+}
+
+function parseSignalFromLabels(labels) {
+    if (!labels || labels.length === 0) return 0;
+    const names = labels.map(l => (l.description || '').toLowerCase());
+    const hasWifi = names.some(n => n.includes('signal') || n.includes('wifi') || n.includes('wireless') || n.includes('reception'));
+    if (!hasWifi) return 0;
+    if (names.some(n => n.includes('weak') || n.includes('low') || n.includes('poor'))) return 1;
+    if (names.some(n => n.includes('strong') || n.includes('full') || n.includes('excellent'))) return 4;
+    return 2;
+}
+
+function parseSignalFromObjects(objects) {
+    const bars = objects.filter(obj => {
+        const name = (obj.name || '').toLowerCase();
+        return obj.score > 0.5 && (name.includes('bar') || name.includes('column') || name.includes('rectangle'));
+    });
+    if (bars.length >= 1 && bars.length <= 4) return bars.length;
+    return 0;
+}
+
+// ============================================================
+// Start Server
+// ============================================================
+// ให้ระบบใช้ PORT ของ Google Cloud หรือถ้ารันในคอมตัวเองให้ใช้ 8080
+const port = process.env.PORT || 8080; 
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });

@@ -128,36 +128,59 @@ document.addEventListener('DOMContentLoaded', () => {
         signalText.style.color = "var(--text-muted)";
     });
 
-    function handleImageUpload() {
+    async function handleImageUpload() {
         if (!signalImage.files || !signalImage.files[0]) return;
         
         const file = signalImage.files[0];
-        const reader = new FileReader();
         
+        // --- 1. Show Local Preview ---
+        const reader = new FileReader();
         reader.onload = (e) => {
             previewImg.src = e.target.result;
             uploadArea.style.display = 'none';
             imagePreview.style.display = 'block';
             
-            // Mock AI Analysis
+            // Show AI Loading State
             signalText.style.display = 'none';
             aiStatus.style.display = 'flex';
-            
-            setTimeout(() => {
-                aiStatus.style.display = 'none';
-                signalText.style.display = 'block';
-                
-                // Mock logic: Random signal 1-4
-                const mockSignal = Math.floor(Math.random() * 4) + 1;
-                signalInput.value = mockSignal;
-                
-                signalText.textContent = signalTexts[mockSignal];
-                signalText.style.color = signalColors[mockSignal];
-                signalText.style.fontWeight = "600";
-            }, 2500); // 2.5 seconds AI delay
         };
-        
         reader.readAsDataURL(file);
+
+        // --- 2. Call Real Google Vision AI Backend ---
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const response = await fetch('/api/analyze-signal', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            aiStatus.style.display = 'none';
+            signalText.style.display = 'block';
+
+            if (data.success) {
+                const signal = parseInt(data.signal_level);
+                signalInput.value = signal;
+                
+                signalText.textContent = signalTexts[signal] || `AI ตรวจพบ: ${signal} ขีด`;
+                signalText.style.color = signalColors[signal] || "var(--primary)";
+                signalText.style.fontWeight = "600";
+            } else {
+                throw new Error(data.error || 'การวิเคราะห์ล้มเหลว');
+            }
+        } catch (error) {
+            console.error('AI Image Analysis Error:', error);
+            aiStatus.style.display = 'none';
+            signalText.style.display = 'block';
+            
+            // Fallback value on error
+            signalInput.value = 2;
+            signalText.textContent = `ระบบ AI ไม่พร้อมใช้งาน (ค่าเริ่มต้น: 2 ขีด)`;
+            signalText.style.color = signalColors[2];
+            signalText.style.fontWeight = "600";
+        }
     }
 
     // --- Dashboard Data ---
