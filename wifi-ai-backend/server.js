@@ -7,7 +7,6 @@ const { createClient } = require('@supabase/supabase-js');
 const vision = require('@google-cloud/vision');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // File upload handler - keep image in memory
 const upload = multer({
@@ -333,9 +332,9 @@ function parseSignalFromObjects(objects) {
 // ============================================================
 // Start Server
 // ============================================================
-app.listen(PORT, () => {
-    console.log(`\n🚀 WiFi Report AI Server running at http://localhost:${PORT}`);
-    console.log(`📊 Supabase: ${process.env.SUPABASE_URL}`);
-    console.log(`🤖 Vision AI: ${visionClient ? 'Ready' : 'Fallback mode'}`);
-    console.log(`\nOpen http://localhost:${PORT} in your browser\n`);
+// ให้ระบบใช้ PORT ของ Google Cloud หรือถ้ารันในคอมตัวเองให้ใช้ 8080
+const port = process.env.PORT || 8080; 
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
