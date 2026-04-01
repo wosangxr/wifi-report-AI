@@ -1,4 +1,3 @@
-const path = require('path');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -33,17 +32,41 @@ try {
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(__dirname)); // Serve frontend files
 
-// Serve frontend files from the same folder
-app.use(express.static(__dirname)); 
+// ==========================================
+// 2. Database Configuration
+// ==========================================
+const dbConfig = {
+    user: process.env.DB_USER || "sa",
+    password: process.env.DB_PASSWORD || "123456789",
+    server: process.env.DB_SERVER || "localhost",
+    database: process.env.DB_DATABASE || "wifi_issues",
+    options: {
+        encrypt: false, // Set to true if using Azure
+        trustServerCertificate: true // Trust local certificates
+    }
+};
 
-// Explicit fallback routes for main pages
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+// Initial Database Connection Check
+console.log('--- Database Configuration ---');
+console.log('Server:', dbConfig.server);
+console.log('User:', dbConfig.user);
+console.log('Database:', dbConfig.database);
+console.log('------------------------------');
 
-// ============================================================
-// API Routes
-// ============================================================
+sql.connect(dbConfig).then(pool => {
+    if (pool.connected) {
+        console.log('✅ Connected to SQL Server successfully!');
+    }
+}).catch(err => {
+    console.error('❌ SQL Connection Error:', err.message);
+    console.log('TIP: Check if TCP/IP is enabled and SQL Server is running.');
+});
+
+// ==========================================
+// 3. API Routes
+// ==========================================
 
 // Health Check
 app.get('/api/health', (req, res) => {
