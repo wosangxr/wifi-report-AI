@@ -175,10 +175,10 @@ document.addEventListener('DOMContentLoaded', () => {
             aiStatus.style.display = 'none';
             signalText.style.display = 'block';
             
-            // Fallback value on error
-            signalInput.value = 2;
-            signalText.textContent = `ระบบ AI ไม่พร้อมใช้งาน (ค่าเริ่มต้น: 2 ขีด)`;
-            signalText.style.color = signalColors[2];
+            // Clear value on error so user must upload a valid image
+            signalInput.value = "";
+            signalText.textContent = error.message || `ระบบ AI ไม่พบสัญญาณจากภาพ ลองใหม่อีกครั้ง`;
+            signalText.style.color = "#f72585";
             signalText.style.fontWeight = "600";
         }
     }
