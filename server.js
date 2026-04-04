@@ -4,13 +4,13 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
-const vision = require('@google-cloud/vision');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 15 * 1024 * 1024 } 
+    limits: { fileSize: 15 * 1024 * 1024 }
 });
 
 // ── Initialize Clients ──
@@ -23,13 +23,9 @@ if (supabaseUrl === 'https://placeholder.supabase.co') {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-let visionClient;
-try {
-    visionClient = new vision.ImageAnnotatorClient();
-    console.log('✅ Cloud Vision AI client initialized');
-} catch (err) {
-    console.warn('⚠️  Cloud Vision AI not available:', err.message);
-}
+// ── Initialize Gemini AI ──
+const geminiApiKey = process.env.GEMINI_API_KEY || 'ใส่_API_KEY_ของคุณที่นี่';
+const genAI = new GoogleGenerativeAI(geminiApiKey);
 
 // ── Middlewares ──
 app.use(cors());
@@ -47,56 +43,78 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html'))
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
-        message: 'WiFi Report AI Backend — Supabase + Cloud Vision',
+        message: 'WiFi Report AI Backend — Supabase + Gemini AI',
         supabase: process.env.SUPABASE_URL ? 'configured' : 'missing',
-        vision_ai: visionClient ? 'ready' : 'fallback'
+        gemini_key: geminiApiKey !== 'ใส่_API_KEY_ของคุณที่นี่' ? 'configured' : 'MISSING',
+        vision_ai: 'gemini-ready'
     });
 });
 
 app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ success: false, error: 'No image provided' });
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'No image provided' });
+        }
 
-        let signalLevel = 0;
-        let aiMethod = 'none';
+        // ✅ แก้ไข: ใช้ชื่อ model ที่ถูกต้อง (gemini-1.5-flash-latest ถูก deprecate)
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-002" });
 
-        if (visionClient) {
-            const [visionResult] = await visionClient.annotateImage({
-                image: { content: req.file.buffer.toString('base64') },
-                features: [
-                    { type: 'TEXT_DETECTION' },
-                    { type: 'LABEL_DETECTION', maxResults: 20 },
-                    { type: 'OBJECT_LOCALIZATION', maxResults: 20 }
-                ]
+        const imagePart = {
+            inlineData: {
+                data: req.file.buffer.toString("base64"),
+                mimeType: req.file.mimetype
+            },
+        };
+
+        // ✅ แก้ไข: prompt ที่ชัดเจนขึ้น บังคับให้ตอบแค่ตัวเลข
+        const prompt = `Look at this screenshot carefully.
+
+Find the WiFi signal icon OR mobile data signal (4G/5G/LTE) bars in the image.
+Count how many bars/divisions are filled/active.
+
+Rules:
+- Full signal (4 bars filled) → reply: 4
+- 3 bars filled → reply: 3
+- 2 bars filled → reply: 2
+- 1 bar filled → reply: 1
+- No signal icon found or 0 bars → reply: 0
+
+IMPORTANT: Reply with a SINGLE digit only (0, 1, 2, 3, or 4). No other text.`;
+
+        const result = await model.generateContent([prompt, imagePart]);
+        const responseText = result.response.text().trim();
+
+        console.log(`[Gemini] Raw response: "${responseText}"`);
+
+        // ✅ แก้ไข: ดึงตัวเลขแรกที่เจอในคำตอบ (ป้องกันกรณี Gemini ตอบมีข้อความแถม)
+        const match = responseText.match(/[0-4]/);
+        const signalLevel = match ? parseInt(match[0]) : NaN;
+
+        if (isNaN(signalLevel) || signalLevel === 0) {
+            return res.json({
+                success: false,
+                error: 'AI วิเคราะห์ไม่พบระดับสัญญาณ กรุณาถ่ายรูปให้เห็นไอคอน WiFi หรือสัญญาณมือถือชัดเจน'
             });
-
-            const textAnnotations = visionResult.textAnnotations || [];
-            if (textAnnotations.length > 0) {
-                const fullText = textAnnotations[0].description || '';
-                const parsed = parseSignalFromText(fullText);
-                if (parsed > 0) { signalLevel = parsed; aiMethod = 'OCR'; }
-            }
-
-            if (signalLevel === 0) {
-                const labels = visionResult.labelAnnotations || [];
-                const parsed = parseSignalFromLabels(labels);
-                if (parsed > 0) { signalLevel = parsed; aiMethod = 'Label'; }
-            }
-
-            if (signalLevel === 0) {
-                const objects = visionResult.localizedObjectAnnotations || [];
-                const parsed = parseSignalFromObjects(objects);
-                if (parsed > 0) { signalLevel = parsed; aiMethod = 'Object'; }
-            }
         }
 
-        if (signalLevel === 0) {
-            return res.json({ success: false, error: 'AI วิเคราะห์ไม่พบระดับสัญญาณ 4G/5G หรือ WiFi โปรดลองภาพที่ชัดเจนขึ้น' });
-        }
+        res.json({ success: true, signal_level: signalLevel, ai_method: 'Gemini Vision' });
 
-        res.json({ success: true, signal_level: signalLevel, ai_method: aiMethod });
     } catch (err) {
-        res.json({ success: false, error: 'เกิดข้อผิดพลาดจาก AI: ' + err.message });
+        console.error("AI Error:", err);
+
+        // ✅ แก้ไข: แสดง error ที่ชัดเจนขึ้น
+        let errorMsg = 'เกิดข้อผิดพลาดจาก AI';
+        if (err.message?.includes('API_KEY_INVALID') || err.message?.includes('API key')) {
+            errorMsg = 'GEMINI_API_KEY ไม่ถูกต้อง กรุณาตรวจสอบ Environment Variables';
+        } else if (err.message?.includes('quota') || err.message?.includes('QUOTA')) {
+            errorMsg = 'API quota หมดแล้ว กรุณาลองใหม่ภายหลัง';
+        } else if (err.message?.includes('not found') || err.message?.includes('404')) {
+            errorMsg = 'ชื่อ model ไม่ถูกต้อง';
+        } else {
+            errorMsg = 'เกิดข้อผิดพลาด: ' + err.message;
+        }
+
+        res.json({ success: false, error: errorMsg });
     }
 });
 
@@ -196,43 +214,8 @@ app.post('/api/clear-all', async (req, res) => {
     }
 });
 
-function parseSignalFromText(text) {
-    if (!text) return 0;
-    const fractionMatch = text.match(/\b([1-4])\/[4-5]\b/);
-    if (fractionMatch) return parseInt(fractionMatch[1]);
-    const barMatch = text.match(/\b([1-4])\s*(bar|bars|ขีด|สัญญาณ|signal)/i);
-    if (barMatch) return parseInt(barMatch[1]);
-    const dbmMatch = text.match(/-(\d{2,3})\s*d[Bb][Mm]/);
-    if (dbmMatch) {
-        const dbm = parseInt(dbmMatch[1]);
-        if (dbm <= 50) return 4;
-        if (dbm <= 60) return 3;
-        if (dbm <= 70) return 2;
-        return 1;
-    }
-    return 0;
-}
-
-function parseSignalFromLabels(labels) {
-    if (!labels || labels.length === 0) return 0;
-    const names = labels.map(l => (l.description || '').toLowerCase());
-    const hasWifi = names.some(n => n.includes('signal') || n.includes('wifi') || n.includes('wireless') || n.includes('reception'));
-    if (!hasWifi) return 0;
-    if (names.some(n => n.includes('weak') || n.includes('low') || n.includes('poor'))) return 1;
-    if (names.some(n => n.includes('strong') || n.includes('full') || n.includes('excellent'))) return 4;
-    return 2;
-}
-
-function parseSignalFromObjects(objects) {
-    const bars = objects.filter(obj => {
-        const name = (obj.name || '').toLowerCase();
-        return obj.score > 0.5 && (name.includes('bar') || name.includes('column') || name.includes('rectangle'));
-    });
-    if (bars.length >= 1 && bars.length <= 4) return bars.length;
-    return 0;
-}
-
-const port = process.env.PORT || 8080; 
+const port = process.env.PORT || 8080;
 app.listen(port, () => {
     console.log(`🚀 Server is running on port ${port}`);
+    console.log(`🔑 Gemini API Key: ${geminiApiKey !== 'ใส่_API_KEY_ของคุณที่นี่' ? 'SET ✅' : 'MISSING ❌'}`);
 });
