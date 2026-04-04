@@ -57,7 +57,7 @@ app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
         }
 
         // ✅ แก้ไข: ใช้ชื่อ model ที่ถูกต้อง (gemini-1.5-flash-latest ถูก deprecate)
-        const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
         const imagePart = {
             inlineData: {
