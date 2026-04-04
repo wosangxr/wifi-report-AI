@@ -4,7 +4,7 @@
   "description": "WiFi Report AI Backend — Supabase + Cloud Vision",
   "main": "server.js",
   "engines": {
-    "node": ">=18.0.0" 
+    "node": ">=18.0.0"
   },
   "scripts": {
     "start": "node server.js",
@@ -16,6 +16,7 @@
   "type": "commonjs",
   "dependencies": {
     "@google-cloud/vision": "^5.3.5",
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.100.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
