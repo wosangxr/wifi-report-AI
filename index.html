@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแจ้งปัญหาอินเทอร์เน็ต WiFi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <button id="globalThemeToggle" class="floating-theme-btn" title="เปลี่ยนธีม">
+        <i class='bx bx-sun'></i>
+    </button>
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <div id="loginContainer" class="login-container">
+        <div class="glass-card login-card">
+            <div class="login-header">
+                <div class="header-icon mx-auto" style="margin: 0 auto 1.5rem;">
+                    <i class='bx bx-wifi'></i>
+                </div>
+                <h2 style="justify-content: center; margin-bottom: 0.5rem;">เข้าสู่ระบบ</h2>
+                <p>ระบบแจ้งปัญหาอินเทอร์เน็ต WiFi / 4G / 5G</p>
+            </div>
+            <form id="loginForm" autocomplete="off">
+                <div class="input-group">
+                    <label for="username">รหัสนักศึกษา / บุคลากร</label>
+                    <div class="input-icon">
+                        <i class='bx bx-user'></i>
+                        <input type="text" id="username" placeholder="กรอกรหัสประจำตัว" autocomplete="off" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="fullName">ชื่อ - นามสกุล</label>
+                    <div class="input-icon">
+                        <i class='bx bx-id-card'></i>
+                        <input type="text" id="fullName" placeholder="กรอกชื่อ-นามสกุล" required>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn login-btn">
+                    <span>เข้าสู่ระบบ</span>
+                    <i class='bx bx-log-in-circle'></i>
+                </button>
+                <div style="text-align: center; margin-top: 1.5rem; width: 100%;">
+                    <a href="admin.html" class="admin-login-btn">สำหรับ ADMIN</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="appContainer" class="container" style="display: none;">
+        <header class="app-header">
+            <div style="display: flex; align-items: center; gap: 1.5rem; flex: 1;">
+                <div class="header-icon">
+                    <i class='bx bx-wifi'></i>
+                </div>
+                <div class="header-text">
+                    <h1>ระบบแจ้งปัญหาอินเทอร์เน็ต</h1>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="glass-card form-section">
+                <h2><i class='bx bx-message-error'></i> แจ้งปัญหาการใช้งาน</h2>
+                <form id="issueForm">
+                    <div class="input-group">
+                        <label for="location">อาคาร / สถานที่</label>
+                        <select id="location" required>
+                            <option value="" disabled selected>เลือกอาคาร...</option>
+                            <option value="อาคาร1">อาคาร1</option>
+                            <option value="อาคาร2">อาคาร2</option>
+                            <option value="อาคาร3">อาคาร3</option>
+                            <option value="อาคารอเนกประสงค์">อาคารอเนกประสงค์</option>
+                            <option value="อาคาร4">อาคาร4</option>
+                            <option value="อาคาร5">อาคาร5</option>
+                            <option value="อาคาร6">อาคาร6</option>
+                            <option value="อาคารศูนย์อาหาร1">อาคารศูนย์อาหาร1</option>
+                            <option value="อาคารสำนักงานกลาง">อาคารสำนักงานกลาง</option>
+                            <option value="อาคาร9">อาคาร9</option>
+                            <option value="อาคาร10">อาคาร10</option>
+                            <option value="อาคาร11">อาคาร11</option>
+                            <option value="อาคารศูนย์มีเดีย">อาคารศูนย์มีเดีย</option>
+                            <option value="อื่นๆ">อื่นๆ</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="room">เลขห้อง / บริเวณ</label>
+                        <input type="text" id="room" placeholder="เช่น 5/0116 หรือ ชั้น 2 โซน A" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>หลักฐานระดับสัญญาณ (ภาพถ่าย)</label>
+                        <div class="upload-area" id="uploadArea">
+                            <i class='bx bx-cloud-upload'></i>
+                            <p>คลิกเพื่อแนบไฟล์ภาพแคปหน้าจอ<br>(เห็นไอคอน WiFi หรือ 4G/5G)</p>
+                            <input type="file" id="signalImage" accept="image/*" style="display: none;">
+                        </div>
+                        <div id="imagePreview" style="display: none; position: relative; margin-top: 1rem;">
+                            <img id="previewImg" src="" alt="Preview"
+                                style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <button type="button" id="removeImageBtn"
+                                style="position: absolute; top: 10px; right: 10px; background: rgba(255,0,0,0.8); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;"><i
+                                    class='bx bx-x'></i></button>
+                        </div>
+                        <input type="hidden" id="signalValue" name="signalValue" required>
+                        <div class="ai-status" id="aiStatus"
+                            style="display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 1rem; padding: 0.8rem; border-radius: 8px; background: rgba(76, 201, 240, 0.1); color: var(--primary);">
+                            <i class='bx bx-loader-alt bx-spin'></i> <span>AI กำลังวิเคราะห์รูปภาพ...</span>
+                        </div>
+                        <p class="signal-text" id="signalText" style="margin-top: 0.5rem; text-align: center;">
+                            กรุณาแนบไฟล์รูปภาพ</p>
+                    </div>
+
+                    <!-- ตัวเลือกกรอกสัญญาณเอง -->
+                    <div class="input-group">
+                        <label style="display:flex; align-items:center; gap:0.5rem;">
+                            <i class='bx bx-signal-4' style="color:var(--primary);"></i>
+                            ไม่สะดวกส่งรูป? เลือกระดับสัญญาณเอง
+                        </label>
+                        <div id="manualSignalPicker" style="display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap; margin-top:0.5rem;">
+                            <button type="button" class="signal-pick-btn" data-signal="1" style="display:flex; flex-direction:column; align-items:center; gap:0.3rem; padding:0.8rem 1.2rem; border-radius:16px; border:2px solid #e2e8f0; background:white; cursor:pointer; transition:all 0.2s; min-width:70px;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2" y="18" width="4" height="4" rx="1" fill="#f72585"/><rect x="8" y="14" width="4" height="8" rx="1" fill="#e2e8f0"/><rect x="14" y="9" width="4" height="13" rx="1" fill="#e2e8f0"/><rect x="20" y="4" width="4" height="18" rx="1" fill="#e2e8f0"/></svg>
+                                <span style="font-weight:700; font-size:0.85rem; color:#f72585;">1 ขีด</span>
+                            </button>
+                            <button type="button" class="signal-pick-btn" data-signal="2" style="display:flex; flex-direction:column; align-items:center; gap:0.3rem; padding:0.8rem 1.2rem; border-radius:16px; border:2px solid #e2e8f0; background:white; cursor:pointer; transition:all 0.2s; min-width:70px;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2" y="18" width="4" height="4" rx="1" fill="#f8961e"/><rect x="8" y="14" width="4" height="8" rx="1" fill="#f8961e"/><rect x="14" y="9" width="4" height="13" rx="1" fill="#e2e8f0"/><rect x="20" y="4" width="4" height="18" rx="1" fill="#e2e8f0"/></svg>
+                                <span style="font-weight:700; font-size:0.85rem; color:#f8961e;">2 ขีด</span>
+                            </button>
+                            <button type="button" class="signal-pick-btn" data-signal="3" style="display:flex; flex-direction:column; align-items:center; gap:0.3rem; padding:0.8rem 1.2rem; border-radius:16px; border:2px solid #e2e8f0; background:white; cursor:pointer; transition:all 0.2s; min-width:70px;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2" y="18" width="4" height="4" rx="1" fill="#4cc9f0"/><rect x="8" y="14" width="4" height="8" rx="1" fill="#4cc9f0"/><rect x="14" y="9" width="4" height="13" rx="1" fill="#4cc9f0"/><rect x="20" y="4" width="4" height="18" rx="1" fill="#e2e8f0"/></svg>
+                                <span style="font-weight:700; font-size:0.85rem; color:#4cc9f0;">3 ขีด</span>
+                            </button>
+                            <button type="button" class="signal-pick-btn" data-signal="4" style="display:flex; flex-direction:column; align-items:center; gap:0.3rem; padding:0.8rem 1.2rem; border-radius:16px; border:2px solid #e2e8f0; background:white; cursor:pointer; transition:all 0.2s; min-width:70px;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2" y="18" width="4" height="4" rx="1" fill="#4361ee"/><rect x="8" y="14" width="4" height="8" rx="1" fill="#4361ee"/><rect x="14" y="9" width="4" height="13" rx="1" fill="#4361ee"/><rect x="20" y="4" width="4" height="18" rx="1" fill="#4361ee"/></svg>
+                                <span style="font-weight:700; font-size:0.85rem; color:#4361ee;">4 ขีด</span>
+                            </button>
+                        </div>
+                        <p id="manualSignalText" style="margin-top:0.5rem; text-align:center; font-weight:600; display:none;"></p>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="details">รายละเอียดเพิ่มเติม</label>
+                        <textarea id="details" rows="3"
+                            placeholder="เช่น เน็ตช้ามากช่วงเย็น หรือ หลุดบ่อยมาก"></textarea>
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <span>ส่งแจ้งปัญหา</span>
+                        <i class='bx bx-send'></i>
+                    </button>
+                </form>
+
+                <div
+                    style="margin-top: 2rem; text-align: center; border-top: 2px dashed rgba(0,0,0,0.08); padding-top: 1.5rem;">
+                    <p style="color: var(--text-muted); margin-bottom: 0.8rem; font-weight: 500;">แจ้งปัญหาเร่งด่วน
+                        หรือติดต่อเจ้าหน้าที่โดยตรง</p>
+                    <a href="tel:021234567" class="submit-btn"
+                        style="background: white; color: var(--primary); border: 2px solid var(--primary); text-decoration: none; display: flex; align-items: center; justify-content: center; width: 100%; box-shadow: none;">
+                        <i class='bx bxs-phone-call' style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
+                        <span>สายด่วน IT: 02-123-4567</span>
+                    </a>
+                </div>
+            </section>
+
+            <section class="glass-card dashboard-section">
+                <h2><i class='bx bx-bar-chart-alt-2'></i> จุดปัญหามากที่สุด</h2>
+                <p class="dashboard-subtitle">อัปเดตเรียลไทม์จากระบบ (เดือนนี้)</p>
+
+                <div class="top-spots" id="topSpotsList">
+                </div>
+
+                <div class="status-box mt-4">
+                    <div class="status-icon pulse">
+                        <i class='bx bx-server'></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>สถานะระบบเครือข่ายรวม</h3>
+                        <p class="text-warning">พบความหนาแน่นสูงที่ อาคาร 11</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="toast" class="toast">
+        <i class='bx bx-check-circle'></i>
+        <div class="toast-content">
+            <h4>สำเร็จ!</h4>
+            <p>ระบบได้รับแจ้งปัญหาของคุณแล้ว</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

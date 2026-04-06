@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ผู้ดูแลระบบ - WiFi Admin Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --danger: #e63946;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --bg-glass: rgba(255, 255, 255, 0.75);
+            --border-glass: rgba(255, 255, 255, 0.3);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        body[data-theme="dark"] {
+            --primary: #818cf8;
+            --dark: #e2e8f0;
+            --light: #0f172a;
+            --text-main: #cbd5e1;
+            --text-muted: #94a3b8;
+            --bg-glass: rgba(15, 23, 42, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        body[data-theme="pink"] {
+            --primary: #e83e8c;
+            --secondary: #ff6b9d;
+            --dark: #2d1b2c;
+            --text-main: #4a2b3e;
+            --text-muted: #7a5a6e;
+            --bg-glass: rgba(255, 240, 245, 0.85);
+            background: linear-gradient(135deg, #ffe4ec 0%, #ffd9e6 100%);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7ff 0%, #e9eefa 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .bg-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.3;
+        }
+        .shape-1 { width: 400px; height: 400px; background: var(--primary); top: -150px; left: -150px; }
+        .shape-2 { width: 500px; height: 500px; background: var(--warning); bottom: -200px; right: -100px; }
+        .shape-3 { width: 300px; height: 300px; background: var(--success); top: 40%; left: 70%; }
+
+        .container, .login-container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 1.8rem;
+            border: 1px solid var(--border-glass);
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .floating-theme-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 52px;
+            height: 52px;
+            border-radius: 60px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .floating-logout-btn {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            width: 52px;
+            height: 52px;
+            border-radius: 60px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            display: none;
+        }
+
+        .floating-logout-btn:hover, .floating-theme-btn:hover {
+            transform: scale(1.08);
+        }
+
+        .login-card {
+            max-width: 480px;
+            margin: 5rem auto;
+            animation: fadeInUp 0.7s ease;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, var(--primary), var(--success));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            margin: 0 auto 1rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .input-icon {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 0.2rem 1rem;
+            transition: all 0.2s;
+        }
+
+        .input-icon i {
+            font-size: 1.4rem;
+            color: var(--primary);
+            margin-right: 0.8rem;
+        }
+
+        .input-icon input, .input-icon select {
+            width: 100%;
+            padding: 0.9rem 0;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            outline: none;
+            color: var(--dark);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 28px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 1rem;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .admin-login-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-glass);
+            backdrop-filter: blur(8px);
+            border-radius: 60px;
+            padding: 0.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            border: 1px solid var(--border-glass);
+        }
+        .tab-btn {
+            padding: 0.8rem 1.8rem;
+            border-radius: 40px;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .tab-btn i {
+            font-size: 1.2rem;
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(67,97,238,0.3);
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .badge {
+            padding: 0.3rem 0.9rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-danger { background: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
+        .badge-warning { background: #fff3e0; color: #d97706; border: 1px solid #fed7aa; }
+        .badge-success { background: #e0f2e9; color: #059669; border: 1px solid #a7f3d0; }
+        .badge-info { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .metric-card {
+            background: var(--bg-glass);
+            border-radius: 28px;
+            padding: 1.2rem;
+            text-align: center;
+            border: 1px solid var(--border-glass);
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .metric-value-zero {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+
+        .ap-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        .ap-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9rem 1.2rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            flex-wrap: wrap;
+            transition: all 0.2s;
+        }
+        .ap-item:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .setting-group {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .setting-label {
+            font-weight: 600;
+            color: var(--dark);
+            min-width: 200px;
+        }
+        .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: #ccc;
+            border-radius: 30px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s;
+        }
+        .toggle-switch.active {
+            background: var(--success);
+        }
+        .toggle-switch::after {
+            content: "";
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.3s;
+        }
+        .toggle-switch.active::after {
+            left: 25px;
+        }
+        .setting-input {
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-glass);
+            background: var(--bg-glass);
+            width: 200px;
+        }
+        .building-status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .signal-strength {
+            width: 80px;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .signal-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+        .waiting-badge {
+            background: #fef3c7;
+            color: #d97706;
+            padding: 0.3rem 0.9rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98);}
+            to { opacity: 1; transform: scale(1);}
+        }
+        .fade-out-up {
+            animation: fadeOutUp 0.5s forwards;
+        }
+        @keyframes fadeOutUp {
+            to { opacity: 0; transform: translateY(-40px); visibility: hidden; }
+        }
+        .progress-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: var(--primary);
+            width: 0%;
+        }
+        @media (max-width: 760px) {
+            body { padding: 1rem; }
+            .glass-card { padding: 1.2rem; }
+            .tab-btn { padding: 0.5rem 1rem; font-size: 0.85rem; }
+        }
+        .info-note {
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <button id="globalThemeToggle" class="floating-theme-btn" title="เปลี่ยนธีม">
+        <i class='bx bx-sun'></i>
+    </button>
+    <button id="floatingLogoutBtn" class="floating-logout-btn" title="ออกจากระบบ">
+        <i class='bx bx-log-out'></i>
+    </button>
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+    
+    <!-- Admin Login Section -->
+    <div id="adminLoginContainer" class="login-container">
+        <div class="glass-card login-card">
+            <div class="login-header">
+                <div class="header-icon" style="background: linear-gradient(135deg, var(--danger), var(--warning));">
+                    <i class='bx bx-shield-quarter'></i>
+                </div>
+                <h2 style="color: var(--dark);">สำหรับผู้ดูแลระบบ</h2>
+                <p style="color: var(--text-muted);">เข้าสู่ระบบจัดการโครงสร้างพื้นฐาน WiFi</p>
+            </div>
+            <form id="adminLoginForm" autocomplete="off">
+                <div class="input-group">
+                    <label for="adminUsername">รหัสผู้ดูแลระบบ</label>
+                    <div class="input-icon">
+                        <i class='bx bx-user'></i>
+                        <input type="text" id="adminUsername" placeholder="กรอกรหัสแอดมิน" autocomplete="off" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="adminPassword">รหัสผ่าน</label>
+                    <div class="input-icon">
+                        <i class='bx bx-lock-alt'></i>
+                        <input type="password" id="adminPassword" placeholder="กรอกรหัสผ่าน" autocomplete="new-password" required>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn login-btn" style="background: linear-gradient(135deg, var(--danger), var(--warning));">
+                    <span>เข้าสู่ระบบ</span>
+                    <i class='bx bx-log-in-circle'></i>
+                </button>
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <a href="index.html" class="admin-login-btn">กลับไปหน้า USER</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Admin Dashboard -->
+    <div id="adminAppContainer" class="container" style="display: none; flex-direction: column;">
+        <header class="app-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="header-icon" style="background: linear-gradient(135deg, var(--warning), var(--danger)); width: 55px; height: 55px;">
+                    <i class='bx bx-shield-quarter'></i>
+                </div>
+                <div>
+                    <h1 style="color: var(--dark); font-size: 1.8rem;">ศูนย์ควบคุมระบบอินเทอร์เน็ต</h1>
+                    <p style="color: var(--text-muted);">ผู้ดูแลระบบ | จัดการเครือข่ายและปัญหา</p>
+                </div>
+            </div>
+            <div class="nav-buttons" style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                <button onclick="resetAllData()" class="btn-outline" style="border-color: var(--danger); color: var(--danger);">
+                    <i class='bx bx-trash'></i> ล้างข้อมูลแจ้ง
+                </button>
+                <button onclick="resetRanking()" class="btn-outline" style="background: var(--danger); border-color: var(--danger); color: white;">
+                    <i class='bx bx-reset'></i> รีเซ็ตอันดับ
+                </button>
+                <button onclick="checkInventory()" class="btn-outline" style="background: var(--success); border-color: var(--success); color: white;">
+                    <i class='bx bx-package'></i> รับเช็คสินค้า
+                </button>
+            </div>
+        </header>
+
+        <!-- แท็บระบบจัดการ -->
+        <div class="admin-tabs">
+            <button class="tab-btn active" data-tab="reports"><i class='bx bx-message-alt-detail'></i> รายงานปัญหา</button>
+            <button class="tab-btn" data-tab="network"><i class='bx bx-wifi'></i> ระบบดูแลอินเทอร์เน็ตภายใน</button>
+            <button class="tab-btn" data-tab="analytics"><i class='bx bx-line-chart'></i> วิเคราะห์โครงข่าย</button>
+            <button class="tab-btn" data-tab="settings"><i class='bx bx-cog'></i> ตั้งค่าระบบ</button>
+        </div>
+
+        <!-- แท็บที่ 1: รายการแจ้งปัญหา -->
+        <div id="reportsTab" class="tab-content active">
+            <section class="glass-card" style="background: linear-gradient(135deg, rgba(67, 97, 238, 0.15), rgba(76, 201, 240, 0.1)); border-left: 5px solid var(--primary); margin-bottom: 1.5rem;">
+                <h2 style="color: var(--primary); display: flex; align-items: center; gap: 0.6rem;"><i class='bx bx-brain'></i> AI วิเคราะห์ภาพรวมปัญหาอินเทอร์เน็ต</h2>
+                <div id="aiSummaryContent" style="margin-top: 0.8rem; color: var(--text-main); line-height: 1.6;">
+                    <i class='bx bx-loader-alt bx-spin'></i> กำลังประมวลผล...
+                </div>
+            </section>
+            <section class="glass-card">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap;">
+                    <h2><i class='bx bx-list-ul'></i> รายการปัญหาที่ได้รับแจ้ง</h2>
+                    <span id="issueCountBadge" style="background: var(--primary); color: white; padding: 0.2rem 1rem; border-radius: 40px;">0</span>
+                </div>
+                <div id="issuesListContainer"></div>
+            </section>
+        </div>
+
+        <!-- แท็บที่ 2: ระบบดูแลอินเทอร์เน็ตภายใน - แสดงสถานะตามอาคารที่กำหนด -->
+        <div id="networkTab" class="tab-content">
+            <div class="glass-card" style="margin-bottom: 1.5rem;">
+                <h3><i class='bx bx-building'></i> สถานะเครือข่ายตามอาคาร (ข้อมูลจากผู้ใช้แจ้ง)</h3>
+                <div id="buildingStatusList" class="ap-list" style="margin-top: 1rem;"></div>
+            </div>
+            <div class="metric-grid" id="networkMetrics"></div>
+            <div class="glass-card">
+                <h3><i class='bx bx-history'></i> การแจ้งเตือนโครงข่ายล่าสุด</h3>
+                <div id="networkAlerts"></div>
+            </div>
+        </div>
+
+        <!-- แท็บวิเคราะห์โครงข่าย - แสดงข้อมูลจาก index เท่านั้น รีเซ็ตเป็น 0 รอข้อมูล -->
+        <div id="analyticsTab" class="tab-content">
+            <div class="glass-card">
+                <h3><i class='bx bx-stats'></i> วิเคราะห์โครงข่าย (อ้างอิงข้อมูลจากผู้ใช้)</h3>
+                <div id="analyticsDetail">
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <i class='bx bx-message-alt-detail' style="font-size:2rem;"></i>
+                            <div class="metric-value-zero" id="totalReportsCount">0</div>
+                            <div>จำนวนแจ้งปัญหาทั้งหมด</div>
+                        </div>
+                        <div class="metric-card">
+                            <i class='bx bx-check-circle' style="font-size:2rem;"></i>
+                            <div class="metric-value-zero" id="resolvedRate">0</div>
+                            <div>อัตราการแก้ไข (%)</div>
+                        </div>
+                        <div class="metric-card">
+                            <i class='bx bx-signal-2' style="font-size:2rem;"></i>
+                            <div class="metric-value-zero" id="avgSignalOverall">0</div>
+                            <div>ค่าเฉลี่ยสัญญาณรวม (ขีด)</div>
+                        </div>
+                        <div class="metric-card">
+                            <i class='bx bx-building' style="font-size:2rem;"></i>
+                            <div class="metric-value-zero" id="problemBuildings">0</div>
+                            <div>อาคารที่มีปัญหา</div>
+                        </div>
+                    </div>
+                    <div id="problemDistribution" style="margin-top: 1.5rem;"></div>
+                    <div id="buildingRanking" style="margin-top: 1.5rem;"></div>
+                    <div class="info-note">
+                        <i class='bx bx-info-circle'></i> ข้อมูลทั้งหมดดึงจากฐานข้อมูลการแจ้งปัญหาของผู้ใช้เท่านั้น<br>
+                        รอข้อมูลจากหน้า USER (index.html) เพื่อแสดงผลการวิเคราะห์
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- แท็บตั้งค่าระบบ -->
+        <div id="settingsTab" class="tab-content">
+            <div class="glass-card">
+                <h2><i class='bx bx-cog'></i> ตั้งค่าระบบบริหารจัดการเครือข่าย</h2>
+                <div class="setting-group">
+                    <h3><i class='bx bx-wifi'></i> การกำหนดค่า WiFi</h3>
+                    <div class="setting-row"><span class="setting-label">ชื่อเครือข่าย (SSID):</span><input type="text" id="ssidSetting" class="setting-input" value="CAMPUS-WiFi"><button onclick="saveSetting('ssid')" class="btn-outline">บันทึก</button></div>
+                    <div class="setting-row"><span class="setting-label">เปิดใช้งานเครือข่าย Guest:</span><div id="guestNetworkToggle" class="toggle-switch active"></div></div>
+                    <div class="setting-row"><span class="setting-label">จำกัดความเร็วต่อผู้ใช้ (Mbps):</span><input type="number" id="speedLimit" class="setting-input" value="100"><button onclick="saveSetting('speedLimit')" class="btn-outline">ปรับใช้</button></div>
+                </div>
+                <div class="setting-group">
+                    <h3><i class='bx bx-bell'></i> การแจ้งเตือน</h3>
+                    <div class="setting-row"><span class="setting-label">แจ้งเตือนเมื่อสัญญาณอ่อนเกิน 30%:</span><div id="alertThresholdToggle" class="toggle-switch active"></div></div>
+                </div>
+                <div class="setting-group">
+                    <h3><i class='bx bx-shield'></i> ความปลอดภัย</h3>
+                    <div class="setting-row"><span class="setting-label">รหัสผ่าน WiFi:</span><input type="password" id="wifiPassword" class="setting-input" placeholder="********"><button onclick="changeWifiPassword()" class="btn-outline">เปลี่ยนรหัส</button></div>
+                </div>
+                <div id="settingMessage" style="margin-top:1rem; padding:0.8rem; border-radius:16px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // รายชื่ออาคารตามที่กำหนด
+        const BUILDINGS = [
+            "อาคาร1", "อาคาร2", "อาคาร3", "อาคาร อเนกประสงค์", 
+            "อาคาร4", "อาคาร5", "อาคาร6", "อาคารศูนย์อาหาร1", 
+            "อาคารสำนักงานกลาง", "อาคาร9", "อาคาร10", "อาคาร11", 
+            "อาคารศูนย์มีเดีย", "อื่นๆ"
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const supabaseUrl = 'https://fvzcusbcleyytjnyzgib.supabase.co';
+            const supabaseKey = 'sb_publishable_ZFBeEQ9zscxS-MNLwhSbZQ_KGgQJMHf';
+            const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+            // Theme
+            const themes = ['light', 'dark', 'pink'];
+            let currentThemeIndex = themes.indexOf(localStorage.getItem('wifi_theme') || 'light');
+            if(currentThemeIndex === -1) currentThemeIndex = 0;
+            const themeToggleBtn = document.getElementById('globalThemeToggle');
+            function applyTheme() {
+                const theme = themes[currentThemeIndex];
+                if(theme === 'light') document.body.removeAttribute('data-theme');
+                else document.body.setAttribute('data-theme', theme);
+                localStorage.setItem('wifi_theme', theme);
+                const icon = themeToggleBtn.querySelector('i');
+                if(icon) icon.className = theme === 'light' ? 'bx bx-sun' : theme === 'dark' ? 'bx bx-moon' : 'bx bx-infinite';
+            }
+            applyTheme();
+            themeToggleBtn.addEventListener('click', () => {
+                currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+                applyTheme();
+            });
+
+            // Tab Switching
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = {
+                reports: document.getElementById('reportsTab'),
+                network: document.getElementById('networkTab'),
+                analytics: document.getElementById('analyticsTab'),
+                settings: document.getElementById('settingsTab')
+            };
+            tabs.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.getAttribute('data-tab');
+                    tabs.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    Object.values(contents).forEach(c => c.classList.remove('active'));
+                    if(tabId === 'reports') { contents.reports.classList.add('active'); renderTable(); }
+                    else if(tabId === 'network') { contents.network.classList.add('active'); renderBuildingStatus(); renderNetworkMetrics(); }
+                    else if(tabId === 'analytics') { contents.analytics.classList.add('active'); renderAnalyticsFromData(); }
+                    else if(tabId === 'settings') contents.settings.classList.add('active');
+                });
+            });
+
+            // Admin login
+            const adminLoginForm = document.getElementById('adminLoginForm');
+            const adminLoginContainer = document.getElementById('adminLoginContainer');
+            const adminAppContainer = document.getElementById('adminAppContainer');
+            const floatingLogoutBtn = document.getElementById('floatingLogoutBtn');
+
+            adminLoginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const u = document.getElementById('adminUsername').value;
+                const p = document.getElementById('adminPassword').value;
+                if (u !== 'admin' || p !== '123456') { alert('รหัสไม่ถูกต้อง'); return; }
+                const btn = adminLoginForm.querySelector('.login-btn');
+                btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> กำลังเข้าสู่ระบบ...`;
+                btn.disabled = true;
+                setTimeout(() => {
+                    adminLoginContainer.classList.add('fade-out-up');
+                    setTimeout(() => {
+                        adminLoginContainer.style.display = 'none';
+                        adminAppContainer.style.display = 'flex';
+                        floatingLogoutBtn.style.display = 'flex';
+                        renderTable();
+                        renderBuildingStatus();
+                        renderNetworkMetrics();
+                        renderAnalyticsFromData();
+                        initToggleSwitches();
+                        setInterval(() => {
+                            renderTable();
+                            renderBuildingStatus();
+                            renderAnalyticsFromData();
+                        }, 30000);
+                    }, 500);
+                }, 500);
+            });
+
+            window.resetRanking = async () => { alert("รีเซ็ตอันดับเรียบร้อย"); };
+            window.resetAllData = async () => { if(confirm('ล้างข้อมูลแจ้งปัญหาทั้งหมด?')) { await supabaseClient.from('wifi_reports').update({ status: 'deleted' }).neq('status', 'deleted'); renderTable(); renderBuildingStatus(); renderAnalyticsFromData(); alert('เคลียร์ข้อมูลเรียบร้อย'); } };
+            window.checkInventory = () => { alert("📦 สินค้า: AP 14 เครื่อง, Switch 10 ตัว, สายLAN 50 เส้น, อุปกรณ์สำรอง 5 ชุด"); };
+
+            const listContainer = document.getElementById('issuesListContainer');
+            const issueCountSpan = document.getElementById('issueCountBadge');
+
+            async function renderTable() {
+                try {
+                    const { data: issues, error } = await supabaseClient.from('wifi_reports').select('*').neq('status', 'deleted').order('created_at', { ascending: false });
+                    if (error) throw error;
+                    const valid = issues.filter(i => i.location !== 'SYSTEM_RESET');
+                    issueCountSpan.innerText = `${valid.length} รายการ`;
+                    listContainer.innerHTML = valid.length === 0 ? `<div class="empty-state"><i class='bx bx-check-shield'></i><h3>ยังไม่มีการแจ้งปัญหา</h3><p>ไม่มีข้อมูลการแจ้งในระบบ</p></div>` : '';
+                    if(valid.length) {
+                        let locationCount = {}, weak=0;
+                        valid.forEach(i => { if(i.location) locationCount[i.location] = (locationCount[i.location]||0)+1; if(parseInt(i.signal_level)<=2) weak++; });
+                        let topLoc = Object.keys(locationCount).sort((a,b)=>locationCount[b]-locationCount[a])[0] || '-';
+                        document.getElementById('aiSummaryContent').innerHTML = `<p>🤖 AI วิเคราะห์: พื้นที่ "${topLoc}" มีการแจ้งปัญหาสูงสุด (${locationCount[topLoc]||0} ครั้ง) พบสัญญาณอ่อน ${weak} รายการ แนะนำตรวจสอบ Access Point บริเวณดังกล่าว</p>`;
+                        valid.forEach(issue => {
+                            const signal = parseInt(issue.signal_level);
+                            const badgeClass = signal<=2?'badge-danger':signal===3?'badge-warning':'badge-success';
+                            const status = issue.status || 'pending';
+                            const imgHtml = issue.image_url ? `<div style="margin-top:0.8rem;"><img src="${issue.image_url}" alt="หลักฐาน" style="max-width:200px; max-height:150px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); cursor:pointer; object-fit:cover;" onclick="window.open('${issue.image_url}','_blank')"></div>` : '';
+                            listContainer.innerHTML += `<div class="glass-card" style="margin-bottom:1rem; padding:1rem;"><div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:1rem;"><div style="flex:1;"><h3>${issue.location} <span class="badge ${badgeClass}">📶 ${signal} ขีด</span> <span class="badge" style="background:${status==='resolved'?'#d1fae5':'#fef3c7'}">${status==='resolved'?'แก้ไขแล้ว':'กำลังดำเนินการ'}</span></h3><p><i class='bx bx-user'></i> ${issue.username || 'ไม่ระบุ'} | ${issue.room || '-'}</p><p>${issue.details || ''}</p>${imgHtml}<small>${new Date(issue.created_at).toLocaleString()}</small></div><div style="display:flex; gap:0.5rem; align-items:flex-start;"><button class="toggle-status btn-outline" data-id="${issue.id}" data-status="${status}" style="margin-right:8px;">${status==='resolved'?'ดำเนินการซ้ำ':'แก้ไขแล้ว'}</button><button class="delete-issue btn-outline" data-id="${issue.id}" style="background:var(--danger);color:white;">ลบ</button></div></div></div>`;
+                        });
+                        document.querySelectorAll('.toggle-status').forEach(btn => btn.onclick = async (e) => { const id=btn.dataset.id; const newStat = btn.dataset.status === 'resolved' ? 'pending' : 'resolved'; await supabaseClient.from('wifi_reports').update({status: newStat}).eq('id',id); renderTable(); renderBuildingStatus(); renderAnalyticsFromData(); });
+                        document.querySelectorAll('.delete-issue').forEach(btn => btn.onclick = async (e) => { if(confirm('ลบข้อมูลนี้?')){ await supabaseClient.from('wifi_reports').update({status:'deleted'}).eq('id',btn.dataset.id); renderTable(); renderBuildingStatus(); renderAnalyticsFromData(); } });
+                    } else document.getElementById('aiSummaryContent').innerHTML = '<p>✅ ระบบปกติดี ไม่มีปัญหาที่ถูกรายงาน</p>';
+                } catch(e) { console.error(e); }
+            }
+
+            async function renderBuildingStatus() {
+                try {
+                    const { data: issues, error } = await supabaseClient.from('wifi_reports').select('*').neq('status', 'deleted');
+                    if (error) throw error;
+                    const validIssues = issues.filter(i => i.location !== 'SYSTEM_RESET');
+                    
+                    const buildingStats = {};
+                    BUILDINGS.forEach(b => { buildingStats[b] = { total: 0, weakSignals: 0, avgSignal: 0, signals: [] }; });
+                    
+                    validIssues.forEach(issue => {
+                        const loc = issue.location;
+                        const signal = parseInt(issue.signal_level) || 0;
+                        if (buildingStats[loc]) {
+                            buildingStats[loc].total++;
+                            buildingStats[loc].signals.push(signal);
+                            if (signal <= 2) buildingStats[loc].weakSignals++;
+                        }
+                    });
+                    
+                    for (let b in buildingStats) {
+                        if (buildingStats[b].signals.length > 0) {
+                            const sum = buildingStats[b].signals.reduce((a,c)=>a+c,0);
+                            buildingStats[b].avgSignal = (sum / buildingStats[b].signals.length).toFixed(1);
+                        } else {
+                            buildingStats[b].avgSignal = '-';
+                        }
+                    }
+                    
+                    let html = '';
+                    for (let building of BUILDINGS) {
+                        const stat = buildingStats[building];
+                        const hasIssue = stat.total > 0;
+                        let statusColor = '#94a3b8';
+                        let statusText = 'รอข้อมูล';
+                        let signalPercent = 0;
+                        if (hasIssue) {
+                            const avg = parseFloat(stat.avgSignal);
+                            if (avg <= 2) { statusColor = '#ef4444'; statusText = 'สัญญาณอ่อน'; signalPercent = 40; }
+                            else if (avg <= 3) { statusColor = '#f59e0b'; statusText = 'ปานกลาง'; signalPercent = 65; }
+                            else { statusColor = '#10b981'; statusText = 'ดี'; signalPercent = 90; }
+                        } else {
+                            statusColor = '#94a3b8';
+                            statusText = 'ยังไม่มีข้อมูล';
+                            signalPercent = 0;
+                        }
+                        html += `
+                            <div class="ap-item">
+                                <div class="building-status">
+                                    <i class='bx bx-building' style="font-size:1.5rem; color:${statusColor};"></i>
+                                    <strong style="min-width:140px;">${building}</strong>
+                                </div>
+                                <div style="flex:1; min-width:150px;">
+                                    <div class="signal-strength">
+                                        <div class="signal-fill" style="width:${signalPercent}%; background:${statusColor};"></div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:1rem;">
+                                    <span><i class='bx bx-message-alt-detail'></i> ${stat.total} รายการ</span>
+                                    <span><i class='bx bx-signal-2'></i> ค่าเฉลี่ย: ${stat.avgSignal === '-' ? 'ไม่มีข้อมูล' : stat.avgSignal+' ขีด'}</span>
+                                    <span class="badge" style="background:${statusColor}20; color:${statusColor};">${statusText}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('buildingStatusList').innerHTML = html;
+                } catch(e) { console.error(e); }
+            }
+
+            function renderNetworkMetrics() {
+                document.getElementById('networkMetrics').innerHTML = `
+                    <div class="metric-card"><i class='bx bx-signal-4'></i><div class="metric-value-zero">--</div><div>แบนด์วิดท์ (Mbps)</div><div class="info-note" style="font-size:0.7rem;">รอข้อมูลจากระบบ</div></div>
+                    <div class="metric-card"><i class='bx bx-wifi'></i><div class="metric-value-zero">--</div><div>ผู้ใช้กำลังเชื่อมต่อ</div><div class="info-note" style="font-size:0.7rem;">รอข้อมูลจากระบบ</div></div>
+                    <div class="metric-card"><i class='bx bx-station'></i><div class="metric-value-zero">--</div><div>Access Point ออนไลน์</div><div class="info-note" style="font-size:0.7rem;">รอข้อมูลจากระบบ</div></div>
+                    <div class="metric-card"><i class='bx bx-time-five'></i><div class="metric-value-zero">--</div><div>ค่าเฉลี่ย Latency</div><div class="info-note" style="font-size:0.7rem;">รอข้อมูลจากระบบ</div></div>
+                `;
+                document.getElementById('networkAlerts').innerHTML = `
+                    <p><i class='bx bx-bell'></i> 📡 ระบบกำลังรอข้อมูลจากผู้ใช้ (index.html)</p>
+                    <p><i class='bx bx-info-circle'></i> กรุณาให้ผู้ใช้แจ้งปัญหาผ่านหน้า USER ก่อน</p>
+                    <p><i class='bx bx-building'></i> มีอาคารทั้งหมด ${BUILDINGS.length} อาคารที่พร้อมรับการแจ้ง</p>
+                `;
+            }
+
+            // วิเคราะห์โครงข่าย - ดึงข้อมูลจากฐานข้อมูลเท่านั้น รีเซ็ตเป็น 0 รอข้อมูล
+            async function renderAnalyticsFromData() {
+                try {
+                    const { data: issues, error } = await supabaseClient.from('wifi_reports').select('*').neq('status', 'deleted');
+                    if (error) throw error;
+                    const validIssues = issues.filter(i => i.location !== 'SYSTEM_RESET');
+                    
+                    const totalReports = validIssues.length;
+                    const resolvedCount = validIssues.filter(i => i.status === 'resolved').length;
+                    const resolvedRate = totalReports > 0 ? Math.round((resolvedCount / totalReports) * 100) : 0;
+                    
+                    let allSignals = [];
+                    const buildingStats = {};
+                    BUILDINGS.forEach(b => { buildingStats[b] = { total: 0, signals: [] }; });
+                    
+                    validIssues.forEach(issue => {
+                        const signal = parseInt(issue.signal_level) || 0;
+                        allSignals.push(signal);
+                        const loc = issue.location;
+                        if (buildingStats[loc]) {
+                            buildingStats[loc].total++;
+                            buildingStats[loc].signals.push(signal);
+                        }
+                    });
+                    
+                    const avgSignalOverall = allSignals.length > 0 ? (allSignals.reduce((a,b)=>a+b,0) / allSignals.length).toFixed(1) : 0;
+                    const problemBuildingsCount = Object.values(buildingStats).filter(b => b.total > 0).length;
+                    
+                    document.getElementById('totalReportsCount').innerHTML = totalReports;
+                    document.getElementById('resolvedRate').innerHTML = resolvedRate;
+                    document.getElementById('avgSignalOverall').innerHTML = avgSignalOverall;
+                    document.getElementById('problemBuildings').innerHTML = problemBuildingsCount;
+                    
+                    // แสดงการกระจายปัญหา
+                    const buildingRank = Object.entries(buildingStats)
+                        .filter(([_, stats]) => stats.total > 0)
+                        .sort((a, b) => b[1].total - a[1].total)
+                        .slice(0, 5);
+                    
+                    let rankHtml = '<h4 style="margin-top:1rem;"><i class="bx bx-trophy"></i> อาคารที่มีปัญหาแจ้งสูงสุด</h4><div class="ap-list">';
+                    if (buildingRank.length === 0) {
+                        rankHtml += '<div class="info-note">ยังไม่มีข้อมูลการแจ้งปัญหา</div>';
+                    } else {
+                        buildingRank.forEach(([building, stats], idx) => {
+                            const avgSig = stats.signals.length > 0 ? (stats.signals.reduce((a,b)=>a+b,0)/stats.signals.length).toFixed(1) : 0;
+                            rankHtml += `
+                                <div class="ap-item">
+                                    <span><strong>#${idx+1}</strong> ${building}</span>
+                                    <span>📊 ${stats.total} ครั้ง</span>
+                                    <span>📶 ค่าเฉลี่ย ${avgSig} ขีด</span>
+                                </div>
+                            `;
+                        });
+                    }
+                    rankHtml += '</div>';
+                    
+                    let distributionHtml = '<h4><i class="bx bx-pie-chart-alt-2"></i> สถิติการแก้ไขปัญหา</h4><div class="metric-grid" style="grid-template-columns:repeat(2,1fr);">';
+                    distributionHtml += `<div class="metric-card"><div class="metric-value-zero">${resolvedCount}</div><div>แก้ไขแล้ว</div></div>`;
+                    distributionHtml += `<div class="metric-card"><div class="metric-value-zero">${totalReports - resolvedCount}</div><div>กำลังดำเนินการ</div></div>`;
+                    distributionHtml += '</div>';
+                    
+                    document.getElementById('problemDistribution').innerHTML = distributionHtml;
+                    document.getElementById('buildingRanking').innerHTML = rankHtml;
+                    
+                    if (totalReports === 0) {
+                        document.getElementById('analyticsDetail').innerHTML += `<div class="info-note" style="margin-top:1rem; background:rgba(230,57,70,0.1);">
+                            <i class='bx bx-time'></i> ขณะนี้ยังไม่มีข้อมูล กรุณารอการแจ้งปัญหาจากหน้า USER (index.html)
+                        </div>`;
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            function initToggleSwitches() {
+                const toggles = document.querySelectorAll('.toggle-switch');
+                toggles.forEach(t => { t.addEventListener('click', function() { this.classList.toggle('active'); showSettingMsg('ตั้งค่าถูกบันทึกแล้ว'); }); });
+            }
+            window.saveSetting = (type) => { showSettingMsg(`บันทึกการตั้งค่า ${type} เรียบร้อย`); };
+            window.changeWifiPassword = () => { showSettingMsg('รหัสผ่าน WiFi ถูกเปลี่ยนแล้ว'); };
+            function showSettingMsg(msg) { const div = document.getElementById('settingMessage'); div.innerHTML = `<i class='bx bx-check-circle'></i> ${msg}`; setTimeout(()=> div.innerHTML='', 3000); }
+
+            floatingLogoutBtn.addEventListener('click', () => {
+                if(confirm('ออกจากระบบ?')) {
+                    adminAppContainer.style.display = 'none';
+                    floatingLogoutBtn.style.display = 'none';
+                    adminLoginContainer.style.display = 'flex';
+                    adminLoginContainer.style.animation = 'fadeIn 0.5s ease-out forwards';
+                    document.getElementById('adminUsername').value = '';
+                    document.getElementById('adminPassword').value = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
