@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
+const fetch = require('node-fetch'); // ต้องแน่ใจว่าลง node-fetch ไว้แล้ว (ถ้า Node v18+ ไม่ต้องใช้ก็ได้ แต่มีไว้กันเหนียว)
+const FormData = require('form-data'); // ★ ใช้ form-data ของ Node.js
 
 const app = express();
 
@@ -22,8 +24,8 @@ if (supabaseUrl === 'https://placeholder.supabase.co') {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ── Python AI API URL ──
-const AI_API_URL = process.env.AI_API_URL || 'http://localhost:5000';
+// ── Python AI API URL (ใส่ URL ที่ Deploy มาแล้ว) ──
+const AI_API_URL = process.env.AI_API_URL || 'https://wifi-ai-api-51044642466.asia-southeast1.run.app';
 
 // ── Middlewares ──
 app.use(cors());
@@ -59,14 +61,20 @@ app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, error: 'No image provided' });
         }
 
-        // ส่งรูปไปยัง Python AI API (EasyOCR + OpenCV)
-        const formData = new FormData();
-        const file = new File([req.file.buffer], req.file.originalname || 'image.jpg', { type: req.file.mimetype });
-        formData.append('image', file);
+        console.log(`[AI Request] Sending file to: ${AI_API_URL}/api/analyze`);
 
+        // ★ สร้าง FormData แบบ Node.js
+        const formData = new FormData();
+        formData.append('image', req.file.buffer, { 
+            filename: req.file.originalname || 'upload.jpg',
+            contentType: req.file.mimetype 
+        });
+
+        // ★ ส่ง Request พร้อม Headers ที่ถูกต้อง
         const aiResponse = await fetch(`${AI_API_URL}/api/analyze`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: formData.getHeaders() // จำเป็นมากสำหรับ multipart/form-data ใน Node
         });
 
         const data = await aiResponse.json();
@@ -76,7 +84,7 @@ app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
             return res.json({ success: false, error: data.error || 'AI วิเคราะห์ไม่สำเร็จ' });
         }
 
-        // แปลง signal_strength (1-5) → signal_level เพื่อให้ frontend ใช้งานได้
+        // แปลงผลลัพธ์กลับไปให้ Frontend
         res.json({
             success: true,
             signal_level: data.signal_strength,
@@ -85,17 +93,18 @@ app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
         });
 
     } catch (err) {
-        console.error('AI API Error:', err);
+        console.error('AI API Error:', err.message);
 
         let errorMsg = 'ไม่สามารถเชื่อมต่อ AI API ได้';
-        if (err.cause?.code === 'ECONNREFUSED') {
-            errorMsg = 'Python AI API ไม่ทำงาน กรุณาตรวจสอบว่า Flask server รันอยู่';
+        if (err.code === 'ECONNREFUSED' || err.message.includes('fetch failed')) {
+            errorMsg = 'Python AI API ไม่ตอบสนอง กรุณารอสักครู่ (Cold Start) หรือตรวจสอบการทำงาน';
         }
 
         res.json({ success: false, error: errorMsg });
     }
 });
 
+// ── ส่วนของการบันทึกข้อมูล (Supabase) ──
 app.post('/api/submit', upload.single('image'), async (req, res) => {
     try {
         const { student_id, fullname, location, room, problem, signal, details } = req.body;
