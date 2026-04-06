@@ -87,8 +87,8 @@ IMPORTANT: Reply with a SINGLE digit only (0, 1, 2, 3, or 4). No other text.`;
         console.log(`[Gemini] Raw response: "${responseText}"`);
 
         // ✅ แก้ไข: ดึงตัวเลขแรกที่เจอในคำตอบ (ป้องกันกรณี Gemini ตอบมีข้อความแถม)
-        const match = responseText.match(/[0-4]/);
-        const signalLevel = match ? parseInt(match[0]) : NaN;
+        const match = responseText.match(/[1-4]/);
+        const signalLevel = match ? parseInt(match[0]) : 0;
 
         if (isNaN(signalLevel) || signalLevel === 0) {
             return res.json({
