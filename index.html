@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบแจ้งปัญหาอินเทอร์เน็ต WiFi</title>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Include BoxIcons for premium icons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -21,7 +20,6 @@
         <div class="shape shape-3"></div>
     </div>
 
-    <!-- Login Section -->
     <div id="loginContainer" class="login-container">
         <div class="glass-card login-card">
             <div class="login-header">
@@ -29,7 +27,7 @@
                     <i class='bx bx-wifi'></i>
                 </div>
                 <h2 style="justify-content: center; margin-bottom: 0.5rem;">เข้าสู่ระบบ</h2>
-                <p>ระบบแจ้งปัญหาอินเทอร์เน็ต WiFi</p>
+                <p>ระบบแจ้งปัญหาอินเทอร์เน็ต WiFi / 4G / 5G</p>
             </div>
             <form id="loginForm" autocomplete="off">
                 <div class="input-group">
@@ -57,7 +55,6 @@
         </div>
     </div>
 
-    <!-- Main App Section -->
     <div id="appContainer" class="container" style="display: none;">
         <header class="app-header">
             <div style="display: flex; align-items: center; gap: 1.5rem; flex: 1;">
@@ -71,9 +68,8 @@
         </header>
 
         <main class="main-content">
-            <!-- Form Section -->
             <section class="glass-card form-section">
-                <h2><i class='bx bx-message-error'></i> แจ้งปัญหา WiFi</h2>
+                <h2><i class='bx bx-message-error'></i> แจ้งปัญหาการใช้งาน</h2>
                 <form id="issueForm">
                     <div class="input-group">
                         <label for="location">อาคาร / สถานที่</label>
@@ -101,23 +97,27 @@
                         <input type="text" id="room" placeholder="เช่น 5/0116 หรือ ชั้น 2 โซน A" required>
                     </div>
 
-
                     <div class="input-group">
                         <label>หลักฐานระดับสัญญาณ (ภาพถ่าย)</label>
                         <div class="upload-area" id="uploadArea">
                             <i class='bx bx-cloud-upload'></i>
-                            <p>คลิกหรือลากไฟล์ภาพลงที่นี่<br>หรือถ่ายรูปหน้าจอ</p>
-                            <input type="file" id="signalImage" accept="image/*" capture="environment" style="display: none;">
+                            <p>คลิกเพื่อแนบไฟล์ภาพแคปหน้าจอ<br>(เห็นไอคอน WiFi หรือ 4G/5G)</p>
+                            <input type="file" id="signalImage" accept="image/*" style="display: none;">
                         </div>
                         <div id="imagePreview" style="display: none; position: relative; margin-top: 1rem;">
-                            <img id="previewImg" src="" alt="Preview" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                            <button type="button" id="removeImageBtn" style="position: absolute; top: 10px; right: 10px; background: rgba(255,0,0,0.8); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;"><i class='bx bx-x'></i></button>
+                            <img id="previewImg" src="" alt="Preview"
+                                style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <button type="button" id="removeImageBtn"
+                                style="position: absolute; top: 10px; right: 10px; background: rgba(255,0,0,0.8); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;"><i
+                                    class='bx bx-x'></i></button>
                         </div>
                         <input type="hidden" id="signalValue" name="signalValue" required>
-                        <div class="ai-status" id="aiStatus" style="display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 1rem; padding: 0.8rem; border-radius: 8px; background: rgba(76, 201, 240, 0.1); color: var(--primary);">
+                        <div class="ai-status" id="aiStatus"
+                            style="display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 1rem; padding: 0.8rem; border-radius: 8px; background: rgba(76, 201, 240, 0.1); color: var(--primary);">
                             <i class='bx bx-loader-alt bx-spin'></i> <span>AI กำลังวิเคราะห์รูปภาพ...</span>
                         </div>
-                        <p class="signal-text" id="signalText" style="margin-top: 0.5rem; text-align: center;">กรุณาอัปโหลดรูปภาพ</p>
+                        <p class="signal-text" id="signalText" style="margin-top: 0.5rem; text-align: center;">
+                            กรุณาแนบไฟล์รูปภาพ</p>
                     </div>
 
                     <div class="input-group">
@@ -132,23 +132,23 @@
                     </button>
                 </form>
 
-                <!-- Phone Contact Option -->
-                <div style="margin-top: 2rem; text-align: center; border-top: 2px dashed rgba(0,0,0,0.08); padding-top: 1.5rem;">
-                    <p style="color: var(--text-muted); margin-bottom: 0.8rem; font-weight: 500;">แจ้งปัญหาเร่งด่วน หรือติดต่อเจ้าหน้าที่โดยตรง</p>
-                    <a href="tel:021234567" class="submit-btn" style="background: white; color: var(--primary); border: 2px solid var(--primary); text-decoration: none; display: flex; align-items: center; justify-content: center; width: 100%; box-shadow: none;">
+                <div
+                    style="margin-top: 2rem; text-align: center; border-top: 2px dashed rgba(0,0,0,0.08); padding-top: 1.5rem;">
+                    <p style="color: var(--text-muted); margin-bottom: 0.8rem; font-weight: 500;">แจ้งปัญหาเร่งด่วน
+                        หรือติดต่อเจ้าหน้าที่โดยตรง</p>
+                    <a href="tel:021234567" class="submit-btn"
+                        style="background: white; color: var(--primary); border: 2px solid var(--primary); text-decoration: none; display: flex; align-items: center; justify-content: center; width: 100%; box-shadow: none;">
                         <i class='bx bxs-phone-call' style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
                         <span>สายด่วน IT: 02-123-4567</span>
                     </a>
                 </div>
             </section>
 
-            <!-- Dashboard Section -->
             <section class="glass-card dashboard-section">
-                <h2><i class='bx bx-bar-chart-alt-2'></i> จุดปัญหา WiFi มากที่สุด</h2>
+                <h2><i class='bx bx-bar-chart-alt-2'></i> จุดปัญหามากที่สุด</h2>
                 <p class="dashboard-subtitle">อัปเดตเรียลไทม์จากระบบ (เดือนนี้)</p>
 
                 <div class="top-spots" id="topSpotsList">
-                    <!-- Populated by JS -->
                 </div>
 
                 <div class="status-box mt-4">
@@ -164,7 +164,6 @@
         </main>
     </div>
 
-    <!-- Modal Notification -->
     <div id="toast" class="toast">
         <i class='bx bx-check-circle'></i>
         <div class="toast-content">
@@ -173,7 +172,6 @@
         </div>
     </div>
 
-    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 </body>

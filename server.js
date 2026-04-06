@@ -56,8 +56,12 @@ app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, error: 'No image provided' });
         }
 
-        // ✅ แก้ไข: ใช้ชื่อ model ที่ถูกต้อง (gemini-1.5-flash-latest ถูก deprecate)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        if (!geminiApiKey || geminiApiKey === 'ใส่_API_KEY_ของคุณที่นี่') {
+            return res.json({ success: false, error: 'GEMINI_API_KEY ขาดหาย! กรุณาตั้งค่าในไฟล์โค้ดหรือใน Cloud Run' });
+        }
+
+        // ✅ เปลี่ยนมาใช้ flash เพื่อให้โหลดเร็วและไม่ติด Error 404
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const imagePart = {
             inlineData: {
@@ -66,18 +70,18 @@ app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
             },
         };
 
-        // ✅ แก้ไข: prompt ที่ชัดเจนขึ้น บังคับให้ตอบแค่ตัวเลข
+        // ✅ ปรับ Prompt ให้ครอบคลุมทั้ง WiFi และ 4G/5G/LTE
         const prompt = `Look at this screenshot carefully.
 
-Find the WiFi signal icon OR mobile data signal (4G/5G/LTE) bars in the image.
-Count how many bars/divisions are filled/active.
+Find the WiFi signal icon (can be curved waves/arcs or vertical bars) OR mobile data signal (4G/5G/LTE vertical bars).
+Count how many levels/divisions are filled or active.
 
 Rules:
-- Full signal (4 bars filled) → reply: 4
-- 3 bars filled → reply: 3
-- 2 bars filled → reply: 2
-- 1 bar filled → reply: 1
-- No signal icon found or 0 bars → reply: 0
+- Full signal (4 waves/bars filled) → reply: 4
+- 3 waves/bars filled → reply: 3
+- 2 waves/bars filled → reply: 2
+- 1 wave/bar filled → reply: 1
+- No signal icon found or 0 filled → reply: 0
 
 IMPORTANT: Reply with a SINGLE digit only (0, 1, 2, 3, or 4). No other text.`;
 
@@ -86,14 +90,13 @@ IMPORTANT: Reply with a SINGLE digit only (0, 1, 2, 3, or 4). No other text.`;
 
         console.log(`[Gemini] Raw response: "${responseText}"`);
 
-        // ✅ แก้ไข: ดึงตัวเลขแรกที่เจอในคำตอบ (ป้องกันกรณี Gemini ตอบมีข้อความแถม)
-        const match = responseText.match(/[1-4]/);
+        const match = responseText.match(/[0-4]/);
         const signalLevel = match ? parseInt(match[0]) : 0;
 
         if (isNaN(signalLevel) || signalLevel === 0) {
             return res.json({
                 success: false,
-                error: 'AI วิเคราะห์ไม่พบระดับสัญญาณ กรุณาถ่ายรูปให้เห็นไอคอน WiFi หรือสัญญาณมือถือชัดเจน'
+                error: 'AI วิเคราะห์ไม่พบระดับสัญญาณจากภาพนี้ กรุณาถ่ายรูปให้เห็นไอคอนชัดเจน'
             });
         }
 
@@ -102,14 +105,13 @@ IMPORTANT: Reply with a SINGLE digit only (0, 1, 2, 3, or 4). No other text.`;
     } catch (err) {
         console.error("AI Error:", err);
 
-        // ✅ แก้ไข: แสดง error ที่ชัดเจนขึ้น
         let errorMsg = 'เกิดข้อผิดพลาดจาก AI';
         if (err.message?.includes('API_KEY_INVALID') || err.message?.includes('API key')) {
-            errorMsg = 'GEMINI_API_KEY ไม่ถูกต้อง กรุณาตรวจสอบ Environment Variables';
+            errorMsg = 'GEMINI_API_KEY ไม่ถูกต้อง กรุณาตรวจสอบให้แน่ใจว่าคีย์ใช้งานได้';
         } else if (err.message?.includes('quota') || err.message?.includes('QUOTA')) {
             errorMsg = 'API quota หมดแล้ว กรุณาลองใหม่ภายหลัง';
         } else if (err.message?.includes('not found') || err.message?.includes('404')) {
-            errorMsg = 'ชื่อ model ไม่ถูกต้อง';
+            errorMsg = 'ชื่อ model ไม่ถูกต้อง หรือการเชื่อมต่อมีปัญหา';
         } else {
             errorMsg = 'เกิดข้อผิดพลาด: ' + err.message;
         }
