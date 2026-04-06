@@ -60,7 +60,7 @@ app.post('/api/analyze-signal', upload.single('image'), async (req, res) => {
             return res.json({ success: false, error: 'GEMINI_API_KEY ขาดหาย! กรุณาตั้งค่าในไฟล์โค้ดหรือใน Cloud Run' });
         }
 
-        // ✅ เปลี่ยนมาใช้ flash เพื่อให้โหลดเร็วและไม่ติด Error 404
+        // ✅ ใช้ flash เพื่อให้โหลดเร็วและไม่ติด Error 404
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const imagePart = {
